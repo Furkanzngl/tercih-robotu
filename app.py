@@ -15,61 +15,79 @@ def load_data():
 
 df = load_data()
 
-st.title("🎓 YKS Akıllı Tercih Robotu")
-
-if 'secilen_bolum' not in st.session_state:
-    st.session_state.secilen_bolum = None
-if 'min_sira' not in st.session_state:
-    st.session_state.min_sira = 0
-if 'max_sira' not in st.session_state:
-    st.session_state.max_sira = 3000000
-if 'derece' not in st.session_state:
-    st.session_state.derece = "Tümü"
-
-def reset_filters():
-    st.session_state.secilen_bolum = None
-    st.session_state.min_sira = 0
-    st.session_state.max_sira = 3000000
-    st.session_state.derece = "Tümü"
-
-bolum_listesi = sorted(df['Program Adı'].dropna().unique().tolist()) if not df.empty else []
-
-col1, col2, col3, col4, col5 = st.columns([3, 1.5, 1.5, 1.5, 1])
-
-with col1:
-    st.selectbox(
-        "Bölüm Ara (Otomatik Tamamlama)", 
-        options=bolum_listesi, 
-        index=None, 
-        placeholder="Örn: Tıbbi Görüntüleme...", 
-        key="secilen_bolum"
-    )
-with col2:
-    st.number_input("Minimum Sıralama", min_value=0, step=10000, key="min_sira")
-with col3:
-    st.number_input("Maksimum Sıralama", min_value=0, step=10000, key="max_sira")
-with col4:
-    st.selectbox("Eğitim Düzeyi", ["Tümü", "Önlisans", "Lisans"], key="derece")
-with col5:
-    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("🧹 Temizle", on_click=reset_filters, use_container_width=True)
+st.title("🎓 YKS Tercih Robotu")
 
 if not df.empty:
+    bolum_listesi = sorted(df['Program Adı'].dropna().unique().tolist())
+    sehir_listesi = sorted(df['Şehir'].dropna().unique().tolist())
+    uni_turleri = ["Tümü"] + sorted(df['Üniversite Türü'].dropna().unique().tolist())
+    burs_turleri = ["Tümü"] + sorted(df['Burs / Ücret'].dropna().unique().tolist())
+    ogretim_turleri = ["Tümü"] + sorted(df['Öğretim Türü'].dropna().unique().tolist())
+
+    # --- ŞIK FİLTRELEME ALANI (FORM) ---
+    with st.form(key="search_form"):
+        st.markdown("### 🔍 Arama Kriterleri")
+        
+        # 1. Satır: Bölüm Arama, Şehir ve Üniversite Türü
+        col1, col2, col3 = st.columns([3, 2, 2])
+        with col1:
+            secilen_bolum = st.selectbox("Bölüm Ara (Otomatik Tamamlama)", options=bolum_listesi, index=None, placeholder="Bölüm adı yazın veya seçin...")
+        with col2:
+            secilen_sehirler = st.multiselect("Şehir Seçimi (İsteğe Bağlı)", options=sehir_listesi)
+        with col3:
+            secilen_uni_turu = st.selectbox("Üniversite Türü", options=uni_turleri)
+
+        # 2. Satır: Sıralama, Eğitim Düzeyi, Burs Durumu, Öğretim Türü
+        col4, col5, col6, col7, col8 = st.columns([1.5, 1.5, 1.5, 2, 2])
+        with col4:
+            min_sira = st.number_input("Min Sıralama", min_value=0, value=0, step=10000)
+        with col5:
+            max_sira = st.number_input("Maks Sıralama", min_value=0, value=3000000, step=10000)
+        with col6:
+            secilen_derece = st.selectbox("Eğitim Düzeyi", ["Tümü", "Önlisans", "Lisans"])
+        with col7:
+            secilen_burs = st.selectbox("Burs / Ücret Durumu", options=burs_turleri)
+        with col8:
+            secilen_ogretim = st.selectbox("Öğretim Türü", options=ogretim_turleri)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        btn_col1, btn_col2 = st.columns([4, 1])
+        with btn_col1:
+            submit_button = st.form_submit_button(label="🔍 Sonuçları Getir / Filtrele", use_container_width=True, type="primary")
+        with btn_col2:
+            st.form_submit_button(label="🧹 Filtreleri Sıfırla", use_container_width=True)
+
+    # --- FİLTRELEME VE MANTIKSAL ARAMA ---
     filtered_df = df.copy()
 
-    if st.session_state.secilen_bolum:
-        # Seçilen ifadenin geçtiği tüm programları kapsar (Burslu, İÖ, İndirimli dahil)
-        filtered_df = filtered_df[filtered_df['Program Adı'].astype(str).str.contains(st.session_state.secilen_bolum, case=False, na=False, regex=False)]
+    if secilen_bolum:
+        filtered_df = filtered_df[filtered_df['Program Adı'].astype(str).str.contains(secilen_bolum, case=False, na=False, regex=False)]
 
-    if st.session_state.derece != "Tümü":
-        filtered_df = filtered_df[filtered_df['Derece'] == st.session_state.derece]
+    if secilen_sehirler:
+        filtered_df = filtered_df[filtered_df['Şehir'].isin(secilen_sehirler)]
+
+    if secilen_uni_turu != "Tümü":
+        filtered_df = filtered_df[filtered_df['Üniversite Türü'] == secilen_uni_turu]
+
+    if secilen_derece != "Tümü":
+        filtered_df = filtered_df[filtered_df['Derece'] == secilen_derece]
+
+    if secilen_burs != "Tümü":
+        filtered_df = filtered_df[filtered_df['Burs / Ücret'] == secilen_burs]
+
+    if secilen_ogretim != "Tümü":
+        filtered_df = filtered_df[filtered_df['Öğretim Türü'] == secilen_ogretim]
 
     filtered_df = filtered_df[
         (filtered_df['Sıralama_Num'].isna()) | 
-        ((filtered_df['Sıralama_Num'] >= st.session_state.min_sira) & (filtered_df['Sıralama_Num'] <= st.session_state.max_sira))
+        ((filtered_df['Sıralama_Num'] >= min_sira) & (filtered_df['Sıralama_Num'] <= max_sira))
     ]
 
     display_df = filtered_df.drop(columns=['Sıralama_Num'])
 
-    st.success(f"Arama kriterlerinize uygun {len(display_df)} sonuç bulundu.")
+    st.markdown("---")
+    st.success(f"Arama kriterlerinize uygun **{len(display_df)}** sonuç bulundu.")
     st.dataframe(display_df, use_container_width=True)
+
+else:
+    st.error("yks_verileri.xlsx dosyası bulunamadı! Önce veri_cek.py kodunu çalıştırın.")
