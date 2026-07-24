@@ -15,7 +15,7 @@ def load_data():
 
 df = load_data()
 
-# --- SESSİON STATE (FİLTRE SIFIRLAMA MANTIĞI) ---
+# --- SESSION STATE İLK DEĞERLERİ ---
 if "f_bolum" not in st.session_state: st.session_state.f_bolum = None
 if "f_sehir" not in st.session_state: st.session_state.f_sehir = []
 if "f_uni_turu" not in st.session_state: st.session_state.f_uni_turu = "Tümü"
@@ -24,6 +24,7 @@ if "f_max_sira" not in st.session_state: st.session_state.f_max_sira = 3000000
 if "f_derece" not in st.session_state: st.session_state.f_derece = "Tümü"
 if "f_burs" not in st.session_state: st.session_state.f_burs = "Tümü"
 
+# Filtre Sıfırlama Fonksiyonu (Tıklama anında çalışır)
 def reset_filters():
     st.session_state.f_bolum = None
     st.session_state.f_sehir = []
@@ -50,7 +51,7 @@ if not df.empty:
         with r1_col2:
             st.multiselect("Şehir Seçimi", options=sehir_listesi, placeholder="Tüm şehirler...", key="f_sehir")
 
-        # 2. Satır: Kriter Filtreleri (5 Eşit Parça)
+        # 2. Satır: Kriter Filtreleri
         r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
         with r2_c1:
             st.number_input("Min Sıralama", min_value=0, step=10000, key="f_min_sira")
@@ -68,14 +69,10 @@ if not df.empty:
         # Butonlar
         btn_col1, btn_col2 = st.columns([4, 1])
         with btn_col1:
-            submitted = st.form_submit_button(label="🔍 Sonuçları Getir", use_container_width=True, type="primary")
+            st.form_submit_button(label="🔍 Sonuçları Getir", use_container_width=True, type="primary")
         with btn_col2:
-            cleared = st.form_submit_button(label="🧹 Filtreleri Temizle", use_container_width=True)
-
-    # --- SIFIRLAMA AKSİYONU ---
-    if cleared:
-        reset_filters()
-        st.rerun()
+            # on_click kullanarak hatayı tamamen engelliyoruz
+            st.form_submit_button(label="🧹 Filtreleri Temizle", on_click=reset_filters, use_container_width=True)
 
     # --- FİLTRELEME MANTIĞI ---
     filtered_df = df.copy()
@@ -100,7 +97,7 @@ if not df.empty:
         ((filtered_df['Sıralama_Num'] >= st.session_state.f_min_sira) & (filtered_df['Sıralama_Num'] <= st.session_state.f_max_sira))
     ]
 
-    # Ekrandaki tablodan gereksiz kolonları kaldır (Sıralama_Num ve Öğretim Türü)
+    # Ekrandaki tablodan gereksiz kolonları kaldır
     drop_cols = ['Sıralama_Num', 'Öğretim Türü']
     display_df = filtered_df.drop(columns=[col for col in drop_cols if col in filtered_df.columns])
 
