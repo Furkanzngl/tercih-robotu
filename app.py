@@ -34,7 +34,7 @@ def reset_filters():
     st.session_state.f_derece = "Tümü"
     st.session_state.f_burs = "Tümü"
 
-st.title("🎓 YKS Akıllı Tercih Robotu")
+st.title("🎓 YKS Tercih Robotu")
 
 if not df.empty:
     bolum_listesi = sorted(df['Program Adı'].dropna().unique().tolist())
