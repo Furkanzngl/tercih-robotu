@@ -9,7 +9,8 @@ def load_data():
         df = pd.read_excel("yks_verileri.xlsx")
         df['Sıralama_Num'] = pd.to_numeric(df['Başarı Sırası'].astype(str).str.replace('.', ''), errors='coerce')
         return df
-    except Exception:
+    except Exception as e:
+        st.error(f"Veri yüklenirken hata oluştu: {e}")
         return pd.DataFrame()
 
 df = load_data()
@@ -44,9 +45,9 @@ with col1:
         key="secilen_bolum"
     )
 with col2:
-    st.number_input("Minimum Sıralama", min_value=0, value=0, step=10000, key="min_sira")
+    st.number_input("Minimum Sıralama", min_value=0, step=10000, key="min_sira")
 with col3:
-    st.number_input("Maksimum Sıralama", min_value=0, value=3000000, step=10000, key="max_sira")
+    st.number_input("Maksimum Sıralama", min_value=0, step=10000, key="max_sira")
 with col4:
     st.selectbox("Eğitim Düzeyi", ["Tümü", "Önlisans", "Lisans"], key="derece")
 with col5:
@@ -57,7 +58,8 @@ if not df.empty:
     filtered_df = df.copy()
 
     if st.session_state.secilen_bolum:
-        filtered_df = filtered_df[filtered_df['Program Adı'] == st.session_state.secilen_bolum]
+        # Seçilen ifadenin geçtiği tüm programları kapsar (Burslu, İÖ, İndirimli dahil)
+        filtered_df = filtered_df[filtered_df['Program Adı'].astype(str).str.contains(st.session_state.secilen_bolum, case=False, na=False, regex=False)]
 
     if st.session_state.derece != "Tümü":
         filtered_df = filtered_df[filtered_df['Derece'] == st.session_state.derece]
@@ -71,5 +73,3 @@ if not df.empty:
 
     st.success(f"Arama kriterlerinize uygun {len(display_df)} sonuç bulundu.")
     st.dataframe(display_df, use_container_width=True)
-else:
-    st.error("yks_verileri.xlsx dosyası bulunamadı! Önce veri_cek.py kodunu çalıştırın.")
